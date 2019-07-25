@@ -1,0 +1,293 @@
+          nginx服务器
+web服务器:(httpd\ nginx\ lighhttpd		
+#可以做静态,不能用Java,免费,性能好,开源
+   tomcat\ weblogic\ websphere\ jobss) 
+#只能java,不免费,开源
+
+需要知道网站是什么语言写的
+nginx :目前性能最好,最多
+tomcat 
+
+打开网站 按f12
+
+network网站
+headers 包 头部
+客户端---------请求包--------->服务器
+general
+服务器---------响应包--------->客户端
+  response
+在此行下
+server:看到对方使用的服务器软件,可以伪装
+
+nginx--------->tengine(淘宝) 二次开发出来的引擎
+配置文件大多还是(nginx.conf)
+是俄罗斯人编写,高性能http和反向代理服务器
+同时是一个IMAP POP3 SMTP代理服务器
+官网:http://nginx.org
+
+
+
+[root@proxy lnmp_soft]# yum -y install gcc pcre-devel openssl-devel					#安装依赖包
+[root@proxy lnmp_soft]# useradd -s /sbin/nologin nginx
+#为了安全, 避免别人通过漏洞而获得权限
+软件gcc 为c语言的解释器
+软件openssl-devel 为了同时装zlib-devel依赖包
+
+红帽的依赖包大多以devel结尾
+英文requires  需要的意思
+
+权限都是针对用户的rwxrwxrwx
+
+谁运行的这个程序 用户---启用-->程序
+
+nginx[面向全网提供服务]
+如root启用这个nginx, 那么nginx则有root权限
+若nginx有漏洞, 则可以通过漏洞得root权限
+
+打命令是root执行命令, 以普通用户的身份启动
+以root启动, 一会降级到普通用户
+
+用yum装包时, 会由软件本身自动生成一个普通用户
+
+[root@proxy ~]# id apache
+uid=48(apache) gid=48(apache) 组=48(apache)
+
+#查看软件运行时会看到是由此用户执行
+[root@web1 ~]# ps -aux | grep httpd
+apache    1158  0.0  0.2 230376  3000 ?        S    10:49   0:00 /usr/sbin/httpd -DFOREGROUND
+
+
+现代化软件都是模块化设计
+软件公司(调研:需要的功能需求
+打包100个功能1G, 所有一起装
+模块化
+1)将100个功能分开, 需要什么装什么
+2)默认模块 (装普遍都装的包)
+
+nginx	软件
+./configure   --with-模块名称  --with-模块名称	#选特定模块
+./configure   --without-名称				#不选模块
+
+
+[root@proxy nginx-1.10.3]# ./configure \
+> --prefix=/usr/local/nginx \			#指定安装路径
+> --user=nginx  \					#指定用户
+> --group=nginx \					#指定组
+> --with-http_ssl_module			#开启ssl加密功能
+
+[root@proxy ~]# make && make install	#编译及安装, 覆盖安装
+https = httpd+ssl
+
+
+网络基本原则:唯一对应
+IP-----主机
+端口--服务
+
+[root@proxy ~]# /usr/local/nginx/sbin/nginx                    //启动服务
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s stop         //关闭服务
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload       
+  							 //重新加载配置文件,确保服务起来
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -V        //查看软件信息
+[root@proxy ~]# ln -s /usr/local/nginx/sbin/nginx  /sbin/        
+//方便后期使用
+
+ln -s 做软链接 (快捷方式)
+
+[root@proxy ~]# netstat -ntulp | grep  :80
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      3688/nginx: master  
+netstat命令可以查看系统中启动的端口信息，该命令常用选项如下：
+-a显示所有端口的信息
+-n以数字格式显示端口号
+-t显示TCP连接的端口
+-u显示UDP连接的端口
+-l显示服务正在监听的端口信息，如httpd启动后，会一直监听80端口
+-p显示监听端口的服务名称是什么（也就是程序名称）
+nginx服务默认通过TCP 80端口监听客户端请求：
+
+[root@client ~]# firefox 192.168.4.5			#查看浏览器
+[root@proxy ~]# curl http://192.168.4.5		#用命令行看浏览器
+
+从nginx1.10.3升级到nginx1.12.0
+1.旧版本有问题
+2.模块(添加新模块, 不能直接添加, 需要升级)
+
+升级时保留旧文件,和老程序(避免风险)
+
+[root@proxy sbin]# cd /usr/local/nginx/
+[root@proxy nginx]# ls
+client_body_temp  fastcgi_temp  logs        sbin       uwsgi_temp
+conf              html          proxy_temp  scgi_temp
+sbin 程序
+logs 日志
+html 网站
+conf 配置文件
+
+make upgrade 等于以下两个命令 (这命令经常报错)
+killall nginx  杀死程序
+nginx		重启程序
+
+1）编译新版本nginx软件
+[root@proxy ~]# cd  /root/lnmp_soft
+[root@proxy lnmp_soft]# tar -xf nginx-1.12.2.tar.gz 
+[root@proxy lnmp_soft]# cd nginx-1.12
+[root@proxy nginx-1.12.2]# ./configure \
+> --prefix=/usr/local/nginx \
+> --user=nginx \
+> --group=nginx \
+> --with-http_ssl_module
+[root@proxy nginx-1.12.2]#make		#编译源码包
+[root@proxy nginx-1.12.2]# ls 
+auto        conf       html      man     src
+CHANGES     configure  LICENSE   objs	  #会生成一个objs
+CHANGES.ru  contrib    Makefile  README
+
+2) 备份老的nginx主程序，并使用编译好的新版本nginx替换老版本
+[root@proxy nginx-1.12.2]# mv /usr/local/nginx/sbin/nginx \
+> /usr/local/nginx/sbin/nginxold1.10		#备份老版本
+[root@proxy nginx-1.12.2]# ls /usr/local/nginx/sbin/
+nginxold1.10							
+
+[root@proxy nginx-1.12.2]# cp objs/nginx   /usr/local/nginx/sbin/
+[root@proxy nginx-1.12.2]# ls /usr/local/nginx/sbin/
+nginx  nginxold1.10				#拷贝新版本
+
+[root@proxy nginx-1.12.2]# make upgrade	#升级
+[root@proxy nginx-1.12.2]# /usr/local/nginx/sbin/nginx -V
+nginx version: nginx/1.12.2			#成功升级版本号为1.12
+
+用户认证
+
+[root@proxy_1 nginx-1.12.2]# vim /usr/local/nginx/conf/nginx.conf
+用nginx搭网站格式
+server {
+listen *:80;   	#(默认*: 不写也行)
+server_name XXX 		#
+auth_basic "Input Password:";   #认证提示符信息
+auth_basic_user_file "/usr/local/nginx/pass"; #认证的密码文件
+
+location / {				#路径
+      root   html;		#网站路径 html是相对路径
+或”绝对路径”
+           index  index.html index.htm;
+index默认网页
+}
+}
+
+相对的是nginx安装路径(/usr/local/nginx/conf/nginx.conf)
+
+
+[root@proxy opt]# yum -y install httpd-tools
+[root@proxy opt]# htpasswd 		#装包得到此命令
+[root@proxy opt]# htpasswd -c /usr/local/nginx/pass tom 
+#tom为用户名 此命令不能再用第二遍 -c 是创建文件
+New password: 
+Re-type new password: 
+Adding password for user tom
+[root@proxy opt]# cat /usr/local/nginx/pass
+tom:$apr1$IVV405wS$OxXZ5TzFLQuiiDgtuenL5/	#密码密文
+
+追加用户			#去掉-c 
+[root@proxy opt]# htpasswd  /usr/local/nginx/pass dbb
+New password: 
+Re-type new password: 
+Adding password for user dbb
+[root@proxy opt]# cat /usr/local/nginx/pass
+tom:$apr1$IVV405wS$OxXZ5TzFLQuiiDgtuenL5/
+dbb:$apr1$tMdJIrFT$fvWXyIYW0EKOBW4y/7WjF.
+
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload  
+#重新加载配置文件    
+#请先确保nginx是启动状态，否则运行该命令会报错,报错信息如下：
+#[error] open() "/usr/local/nginx/logs/nginx.pid" failed (2: No such file or directory)
+
+[root@client ~]# firefox 192.168.4.5		#测试网页
+
+虚拟主机: 基于域名\基于ip\基于端口
+用一台主机一个软件, 实现很多多个网站
+
+http {
+server {
+        listen       80;
+        server_name  www.aaa.com;
+    auth_basic "Input Password:";   #认证提示符信息
+    auth_basic_user_file "/usr/local/nginx/pass";
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+}
+
+:85,94s/#//			#将第85到94行的#替换为空值
+
+   server {
+         listen       80;
+         server_name  www.b.com;		#添加另一个域名
+ 		  charset utf-8;				#使用的编码解释
+         location / {
+             root   www;				#改路劲
+             index  index.html index.htm;	#默认文件
+         }
+    }
+
+[root@proxy ~]# mkdir /usr/local/nginx/www
+[root@proxy nginx]# vim www/index.html
+ 
+[root@client ~]# vim /etc/hosts
+192.168.4.5     www.aaa.com www.b.com
+
+
+编码0-127
+人:英文
+计算机:0 1
+ASCII编码	(百度)
+
+中国的汉字之后在此之后继续编
+GB2312
+
+Unicode 		统一码
+--UTF-8  等等
+        charset utf-8;
+1.源码安装
+2.用户认证
+3.虚拟主机
+http协议是明文协议
+client-------------server
+
+源码安装Nginx时必须使用--with-http_ssl_module参数，启用加密模块，对于需要进行SSL加密处理的站点添加ssl相关指令（设置网站需要的私钥和证书）。
+加密算法一般分为对称算法、非对称算法、信息摘要。
+1.对称算法有：AES、DES，主要应用在单机数据加密。
+2.非对称算法有：RSA、DSA，主要应用在网络数据加密。
+3.信息摘要：MD5、sha256，主要应用在数据完整性校验。
+
+目前三种加密方式
+对称加密		
+加密123----解密123
+非对称加密(加密的密码叫公钥, 解密的秘钥叫私钥)
+公司产生:(私钥,公钥(证书))
+加密123----解密t8y.(随机)
+信息摘要
+MD5被破解了, 现在被用来数据完整性校验
+[root@proxy ~]# echo jjj > a.txt
+
+[root@proxy ~]# md5sum a.txt
+84f5b93db5f53730a144fba69d7b5ab3  a.txt
+#这数字只跟文件内容有关, 与其他无关
+[root@proxy ~]# echo jjja > a.txt
+[root@proxy ~]# md5sum a.txt
+b699049ce1f453628117e8ba6ee75f42  a.txt
+这数字, 可以看到此文件是否别人动过
+
+[root@proxy ~]# sha256sum  a.txt
+ccee39ab37e7b8bccf1f0e25b31e2bb61961080791c32e6f382168c03b75848f  a.txt
+
+
+
+
+
+
+
+
+
+
+
+
